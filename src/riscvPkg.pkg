@@ -1,0 +1,265 @@
+`ifndef RISCV_PKG
+  `define RISCV_PKG
+
+  `include "internal_defines.svh"
+
+  package riscvPkg;
+    /*--------------------------------------------------------------------------
+     * Opcodes (All Instruction Types)
+     *------------------------------------------------------------------------*/
+
+    // Opcodes for the RISC-V ISA, in the lowest 7 bits of the instruction
+    typedef enum logic [`OPCODE_SIZE-1:0] {
+        // Opcode that indicates an integer R-type instruction (register)
+        OP_OP     = 'h33,
+
+        // Opcode that indicates an integer I-type instruction (immediate)
+        OP_IMM    = 'h13,
+
+        // Opcodes for load and store instructions (I-type and S-type)
+        OP_LOAD   = 'h03,
+        OP_STORE  = 'h23,
+
+        // Opcodes for U-type instructions (unsigned immediate)
+        OP_LUI    = 'h37,
+        OP_AUIPC  = 'h17,
+
+        // Opcodes for jump instructions (UJ-type and I-type)
+        OP_JAL    = 'h6F,
+        OP_JALR   = 'h67,
+
+        // Opcode that indicates a general SB-type instruction (branch)
+        OP_BRANCH = 'h63,
+
+        // Opcode that indicates a special system instruction (I-type)
+        OP_SYSTEM = 'h73
+    } opcode_t;
+
+    /*--------------------------------------------------------------------------
+     * R-type Function Codes
+     *------------------------------------------------------------------------*/
+
+    // 7-bit function codes for different classes of R-type instructions
+    typedef enum logic [`FUNCT7_SIZE-1:0] {
+        FUNCT7_INT     = 'h00,
+        FUNCT7_ALT_INT = 'h20,
+        FUNCT7_MUL     = 'h01
+    } rtype_funct7_t;
+
+    // 3-bit function codes for integer R-type instructions
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_ADD  = 'h0,
+        FUNCT3_SLL  = 'h1,
+        FUNCT3_SLT  = 'h2,
+        FUNCT3_SLTU = 'h3,
+        FUNCT3_XOR  = 'h4,
+        FUNCT3_SRL  = 'h5,
+        FUNCT3_OR   = 'h6,
+        FUNCT3_AND  = 'h7
+    } rtype_int_funct3_t;
+
+    // 3-bit function codes for alternate integer R-type instructions
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_SUB = 'h0,
+        FUNCT3_SRA = 'h5
+    } rtype_alt_int_funct3_t;
+
+    // 3-bit function codes for multiply R-type instructions
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_MUL    = 'h0,
+        FUNCT3_MULH   = 'h1,
+        FUNCT3_MULHSU = 'h2,
+        FUNCT3_MULHU  = 'h3,
+        FUNCT3_DIV    = 'h4,
+        FUNCT3_DIVU   = 'h5,
+        FUNCT3_REM    = 'h6,
+        FUNCT3_REMU   = 'h7
+    } rtype_mul_funct3_t;
+
+    /*--------------------------------------------------------------------------
+     * I-type Function Codes
+     *------------------------------------------------------------------------*/
+
+    // 3-bit function codes for integer I-type instructions
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_ADDI      = 'h0,
+        FUNCT3_SLTI      = 'h2,
+        FUNCT3_SLTIU     = 'h3,
+        FUNCT3_XORI      = 'h4,
+        FUNCT3_ORI       = 'h6,
+        FUNCT3_ANDI      = 'h7,
+        FUNCT3_SLLI      = 'h1,
+        FUNCT3_SRLI_SRAI = 'h5
+    } itype_int_funct3_t;
+
+    // 3-bit function codes for load instructions (I-type)
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_LB  = 'h0,
+        FUNCT3_LH  = 'h1,
+        FUNCT3_LW  = 'h2,
+        FUNCT3_LBU = 'h4,
+        FUNCT3_LHU = 'h5
+    } itype_load_funct3_t;
+
+    // 7-bit function codes for integer I-type instructions
+    typedef enum logic [`FUNCT7_SIZE-1:0] {
+        FUNCT7_SRLI = 'h00,
+        FUNCT7_SRAI = 'h20
+    } itype_funct7_t;
+
+    // 12-bit function codes for special system instructions (I-type)
+    typedef enum logic [`FUNCT12_SIZE-1:0] {
+        FUNCT12_ECALL = 'h0_00
+    } itype_funct12_t;
+
+    /*--------------------------------------------------------------------------
+     * S-type Function Codes
+     *------------------------------------------------------------------------*/
+
+    // 3-bit function codes for S-type instructions (store)
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_SB = 'h0,
+        FUNCT3_SH = 'h1,
+        FUNCT3_SW = 'h2
+    } stype_funct3_t;
+
+    /*--------------------------------------------------------------------------
+     * SB-type Function Codes
+     *------------------------------------------------------------------------*/
+
+    // 3-bit function codes for SB-type instructions (branch)
+    typedef enum logic [`FUNCT3_SIZE-1:0] {
+        FUNCT3_BEQ  = 'h0,
+        FUNCT3_BNE  = 'h1,
+        FUNCT3_BLT  = 'h4,
+        FUNCT3_BGE  = 'h5,
+        FUNCT3_BLTU = 'h6,
+        FUNCT3_BGEU = 'h7
+    } sbtype_funct3_t;
+
+    // Aliases for the register in the application binary interface (ABI)
+    typedef enum logic [`REG_BITS-1:0] {
+        REG_ZERO  = 'd0,      // Zero register, hardwired to 0
+        REG_RA    = 'd1,      // Return address register (caller-saved)
+        REG_SP    = 'd2,      // Stack pointer register (callee-saved)
+        REG_GP    = 'd3,      // Global pointer register (points to data section)
+        REG_TP    = 'd4,      // Thread pointer (points to thread-local data)
+        REG_T0    = 'd5,      // Temporary register 0 (caller-saved)
+        REG_T1    = 'd6,      // Temporary register 0 (caller-saved)
+        REG_T2    = 'd7,      // Temporary register 0 (caller-saved)
+        REG_S0_FP = 'd8,      // Saved 0/stack frame pointer (callee-saved)
+        REG_S1    = 'd9,      // Saved register 1 (callee-saved)
+        REG_A0    = 'd10,     // Function argument/return value 0 (caller-saved)
+        REG_A1    = 'd11,     // Function argument/return value 1 (caller-saved)
+        REG_A2    = 'd12,     // Function argument 2 (caller-saved)
+        REG_A3    = 'd13,     // Function argument 3 (caller-saved)
+        REG_A4    = 'd14,     // Function argument 4 (caller-saved)
+        REG_A5    = 'd15,     // Function argument 5 (caller-saved)
+        REG_A6    = 'd16,     // Function argument 6 (caller-saved)
+        REG_A7    = 'd17,     // Function argument 7 (caller-saved)
+        REG_S2    = 'd18,     // Saved register 2 (callee-saved)
+        REG_S3    = 'd19,     // Saved register 3 (callee-saved)
+        REG_S4    = 'd20,     // Saved register 4 (callee-saved)
+        REG_S5    = 'd21,     // Saved register 5 (callee-saved)
+        REG_S6    = 'd22,     // Saved register 6 (callee-saved)
+        REG_S7    = 'd23,     // Saved register 7 (callee-saved)
+        REG_S8    = 'd24,     // Saved register 8 (callee-saved)
+        REG_S9    = 'd25,     // Saved register 9 (callee-saved)
+        REG_S10   = 'd26,     // Saved register 10 (callee-saved)
+        REG_S11   = 'd27,     // Saved register 11 (callee-saved)
+        REG_T3    = 'd28,     // Temporary register 3 (caller-saved)
+        REG_T4    = 'd29,     // Temporary register 4 (caller-saved)
+        REG_T5    = 'd30,     // Temporary register 5 (caller-saved)
+        REG_T6    = 'd31      // Temporary register 6 (caller-saved)
+    } abi_reg_t;
+
+    /*--------------------------------------------------------------------------
+     * Datapath Enumerations
+     *------------------------------------------------------------------------*/
+
+    // ALU operations, default unsigned
+    typedef enum {
+        ALU_SL, ALU_SR, ALU_ADD, ALU_SUB, ALU_XOR, ALU_OR, ALU_AND, ALU_LT,
+        ALU_NOP
+    } alu_op_t;
+
+    typedef enum {
+      BEQ, BNE, BLT, BGE, BLTU, BGEU, NOBRANCH
+    } br_type_t;
+
+    typedef enum {
+        MEM_RD, MEM_WR, MEM_SLEEP
+    } mem_op_t;
+
+    typedef enum {
+        MASK_WORD, MASK_HALF, MASK_BYTE, MASK_NONE
+    } mem_mask_t;
+
+    typedef enum {
+      RD_PC_PLUS_4, RD_ALU, RD_MEM, RD_SYS, RD_NONE
+    } rd_data_src_t;
+
+    // PC source
+    typedef enum {
+        PC_SRC_IMPLICIT, PC_SRC_BXX, PC_SRC_JAL, PC_SRC_JALR
+    } pc_src_t;
+
+    // Forwarding
+    typedef enum {
+        FWD_NONE, FWD_1_EX, FWD_1_MEM, FWD_1_WB, FWD_2_EX, FWD_2_MEM, FWD_2_WB,
+        FWD_JMP
+    } fwd_src_t;
+
+    // Saturation counter branch prediction
+    typedef enum logic [1:0] {
+        SNT=2'b00, WNT=2'b01, WT=2'b10, ST=2'b11
+    } btb_state_t;
+
+    // RISC-V error codes
+    typedef enum logic [4:0] {
+        EX_INT   = 'd0,
+        EX_MOD   = 'd1,
+        EX_TLBL  = 'd2,
+        EX_TLBS  = 'd3,
+        EX_ADEL  = 'd4,
+        EX_ADES  = 'd5,
+        EX_IBE   = 'd6,
+        EX_DBE   = 'd7,
+        EX_SYS   = 'd8,
+        EX_BP    = 'd9,
+        EX_RI    = 'd10,
+        EX_CPU   = 'd11,
+        EX_OV    = 'd12,
+        EX_TR    = 'd13,
+        EX_VCEI  = 'd14,
+        EX_FPE   = 'd15,
+        EX_WATCH = 'd23,
+        EX_VCED  = 'd31
+    } err_code_t;
+
+    /*--------------------------------------------------------------------------
+     * Pipeline State Enumerations
+     *------------------------------------------------------------------------*/
+    typedef struct {
+      logic is_alu_rtype;
+      logic is_alu_pctype;
+      alu_op_t alu_op;
+      br_type_t br_type;
+      logic alu_signed;
+      pc_src_t pc_src;
+    } ex_state_t;
+
+    typedef struct {
+      mem_op_t mem_op;
+      logic mem_signed;
+      mem_mask_t mem_mask;
+    } mem_state_t;
+
+    typedef struct {
+      rd_data_src_t rd_data_src;
+      logic is_nop;
+    } wb_state_t;
+  endpackage : riscvPkg
+
+  import riscvPkg::*;
+`endif
